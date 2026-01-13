@@ -1,0 +1,40 @@
+
+<main>
+<h1>SALES</h1>
+
+<!--hiding the table if there are no sales in the list-->
+
+<table>
+    <thead>
+        <th>ID</th>
+        <th>Customer First Name</th>
+        <th>Customer Last Name</th>
+        <th>Date</th>
+        <th>Total</th>
+        <th>Salesperson ID</th>
+    </thead>
+
+    <!-- this is property binding -->
+    <tbody>
+        @for(item of arrayOfSales; track $index ){
+            <tr>
+                <td>{{item.id}}</td>
+                <td>{{item.customer_first_name}}</td>
+                <td>{{item.customer_last_name}}</td>
+                <td>{{item.date}}</td>
+                <td>{{item.total}}</td>
+                <td>{{item.salesperson_id}}</td>
+                <td><button type="button" (click)="deleteSale(item.id)">X</button></td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<!-- when the button "hears" an event of type click it runs this method-->
+<!-- the event only applies to a click on this specific button/element-->
+<!-- This method adds a sale to the array, it does not require manual refreshing; any change to the array values updates the view automatically -->
+<div>
+    <button type="button" (click)="addMockSale()">Add Sale</button>
+</div>
+
+</main>

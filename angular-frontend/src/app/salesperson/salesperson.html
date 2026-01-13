@@ -1,0 +1,15 @@
+<article>
+    <ul>
+        <li>ID: {{salesperson.id}} </li>
+        <li>First Name: {{salesperson.firstName}} </li>
+        <li>Last Name: {{salesperson.lastName}} </li>
+        <li>Department: {{salesperson.department}} </li>
+        <li>Hire Date: {{salesperson.hireDate}} </li>
+        <li>Salary: ${{salesperson.salary}}</li>
+    </ul>
+    <button type="button" (click)="deleteSalesperson()">DELETE</button>
+
+    <button type="button" (click)="raiseSalary()">RAISE SALARY</button>
+
+    <button type="button" (click)="setFaveSalesperson()">SET FAVORITE SALESPERSON</button>
+</article>

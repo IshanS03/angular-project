@@ -1,0 +1,13 @@
+<main>
+    <h1>SALESPEOPLE</h1>
+
+    <!--we're going to create Salesperson comonent for each Salesperson-->
+    <!--this one is a signle componenet bound to a single Salesperson-->
+    <!-- We're going to use a salesperson component for each Salesperson -->
+
+    <!-- Make Delete call a real delete request. Afterwards, update the UI using getAll-->
+    @for (sp of mockSalespeople; track $index){
+        <app-salesperson [salesperson]="sp" (deleteSalespersonEvent)="deleteMockSalesperson($event)" (raiseSalaryEvent)="raiseMockSalary($event)"></app-salesperson>
+    }
+
+</main>
