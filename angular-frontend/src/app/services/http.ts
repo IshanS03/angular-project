@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { Salesperson } from '../salesperson/salesperson';
+import { Salesperson } from '../models/salesperson';
 import { HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs/internal/Observable';
 import { Sale } from '../models/sale';
@@ -29,6 +29,10 @@ export class Http {
     //to get all salespeople
     getAllSalespeople(): Observable<HttpResponse<Salesperson[]>> {
       return this.http.get<Salesperson[]>(`${this.baseUrl}/salesperson`, {observe: 'response'})
+    }
+
+    getSalespersonById(salespersonId: number): Observable<HttpResponse<Salesperson>> {
+      return this.http.get<Salesperson>(`${this.baseUrl}/salesperson/${salespersonId}`, {observe: 'response'});
     }
 
     //delete a salesperson

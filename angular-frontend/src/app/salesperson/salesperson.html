@@ -4,9 +4,16 @@
         <li>First Name: {{salesperson.firstName}} </li>
         <li>Last Name: {{salesperson.lastName}} </li>
         <li>Department: {{salesperson.department}} </li>
-        <li>Hire Date: {{salesperson.hireDate}} </li>
-        <li>Salary: ${{salesperson.salary}}</li>
+        <!--
+            this value is being sent through a pipe
+            it alters the data being displayed
+            without altering the underlying data
+            syntax = {{<ts variable name> | <pipe name>: <optional parameters>}}      
+        -->
+        <li>Hire Date: {{salesperson.hireDate | date: 'fullTime'}} </li>
+        <li>Salary: ${{salesperson.salary} | currency: 'USD'}</li>
     </ul>
+    <button type="button" (click)="showDetails()">Details</button>
     <button type="button" (click)="deleteSalesperson()">DELETE</button>
 
     <button type="button" (click)="raiseSalary()">RAISE SALARY</button>

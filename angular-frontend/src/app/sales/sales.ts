@@ -1,10 +1,13 @@
 import { Component } from '@angular/core';
 import { Sale } from '../models/sale';
 import { Http } from '../services/http';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { SpongebobPipe } from '../pipes/spongebob-pipe';
 
 @Component({
   selector: 'app-sales',
-  imports: [],
+  imports: [CommonModule, FormsModule, SpongebobPipe],
   templateUrl: './sales.html',
   styleUrl: './sales.css',
 })
@@ -39,6 +42,26 @@ export class Sales {
   }
 
   sales: Sale[] = [];
+  salespersonIds: number[] = [];
+
+  //these variables will hold our create form values
+  //each is mapped to a form input
+  //changing the form changes the values, and changing the values changes the form
+  customerFirstName: string = '';
+  customerLastName: string = '';
+  date: string = '';
+  total: number = 0;
+  salespersonId: number = 0;
+
+  //for the updateform
+  idUpdate: number = 0;
+  updateCustomerFirstName: string = '';
+  updateCustomerLastName: string = '';
+  updateDate: string = '';
+  updateTotal: number = 0;
+  updateSalespersonId: number = 0;
+
+
 
   getAllSales(){
     //make the request from the HTTP service
@@ -53,6 +76,37 @@ export class Sales {
           saleData.salesperson_id
         ));
       }
+    });
+  }  
+
+  getAllSalespersonIds(){
+    this.httpService.getAllSalespeople().subscribe(response => {
+      if (response.body) {
+        this.salespersonIds = response.body.map((spData: any) => spData.id);
+      }
+    });
+  }
+
+  createSale() {
+    let newSale = new Sale(0, this.customerFirstName, this.customerLastName,
+      this.date, this.total, this.salespersonId);
+
+      //if you don't subscribe to a 
+    this.httpService.addSale(newSale).subscribe(response => {
+      console.log(response);
+      this.getAllSales();
+      this.getAllSalespersonIds();
+    });
+  }
+
+  updateSale() {
+    let updatedSale = new Sale(this.idUpdate, this.updateCustomerFirstName,
+      this.updateCustomerLastName, this.updateDate, this.updateTotal,
+      this.updateSalespersonId);
+    this.httpService.updateSale(this.idUpdate, updatedSale).subscribe(response => {
+      console.log(response);
+      this.getAllSales();
+      this.getAllSalespersonIds();
     });
   }
 

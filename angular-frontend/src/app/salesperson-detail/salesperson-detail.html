@@ -1,0 +1,19 @@
+<main>
+<p>SALESSPERSON DETAIL</p>
+
+<!-- the list will apear if we have a a valid object, otherwise not-->
+@if(salesperson.id){
+<ul>
+    <li>{{salesperson.id}}</li>
+    <li>{{salesperson.first_name}}</li>
+    <li>{{salesperson.last_name}}</li>
+    <li>{{salesperson.department}}</li>
+    <li>{{salesperson.hire_date}}</li>
+    <li>{{salesperson.salary}}</li>
+</ul>
+}
+@else{
+<p>No Salesperson with ID {{failedId}} exists!</p>
+}
+
+</main>

@@ -2,10 +2,12 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { SalespersonModel } from '../models/salesperson.model';
 import { DataPass as DataPassService } from '../services/data-pass';
 import { Http as HttpService } from '../services/http';
+import { Router } from '@angular/router'; //for navigation
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-salesperson',
-  imports: [],
+  imports: [CommonModule],
   templateUrl: './salesperson.html',
   styleUrl: './salesperson.css',
 })
@@ -29,9 +31,13 @@ export class Salesperson {
   //@Output sends data up to the parent via event emitter
   @Output() raiseSalaryEvent = new EventEmitter<any>();
 
+  favoriteSalesperson: string = '';
   //we also inject our service here to pass data up to it
-  constructor(private datapass: DataPassService) {
-
+  //we also inject the router to navigate to detail page
+  constructor(private datapass: DataPassService, private router: Router) {
+      this.datapass.favoriteSalespersonSubject.subscribe(fave => {
+        this.favoriteSalesperson = fave;
+      });
   }
 
   setFaveSalesperson() {
@@ -54,6 +60,12 @@ export class Salesperson {
 
   raiseSalary() {
     this.raiseSalaryEvent.emit(this.salesperson.id);
+  }
+
+  //we use the router here to navigate to the details component
+  showDetails() {
+    console.log('Show details for salesperson ID:', this.salesperson.id);
+    this.router.navigate(['/salesperson' + this.salesperson.id]);
   }
 
 }
