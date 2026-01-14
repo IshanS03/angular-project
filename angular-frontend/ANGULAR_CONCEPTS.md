@@ -11,14 +11,17 @@ A beginner-friendly guide to all the Angular concepts used in this project.
 3. [Decorators](#decorators)
 4. [Templates & Data Binding](#templates--data-binding)
 5. [Control Flow](#control-flow)
-6. [Routing](#routing)
-7. [Services & Dependency Injection](#services--dependency-injection)
-8. [HTTP Client](#http-client)
-9. [RxJS & Observables](#rxjs--observables)
-10. [Signals](#signals)
-11. [Models & Interfaces](#models--interfaces)
-12. [Application Bootstrap](#application-bootstrap)
-13. [Testing](#testing)
+6. [Pipes](#pipes)
+7. [Routing](#routing)
+8. [Services & Dependency Injection](#services--dependency-injection)
+9. [HTTP Client](#http-client)
+10. [HTTP Interceptors](#http-interceptors)
+11. [RxJS & Observables](#rxjs--observables)
+12. [Signals](#signals)
+13. [Forms & Two-Way Binding](#forms--two-way-binding)
+14. [Models & Interfaces](#models--interfaces)
+15. [Application Bootstrap](#application-bootstrap)
+16. [Testing](#testing)
 
 ---
 
@@ -39,14 +42,19 @@ src/app/
 ├── nav/                        # Navigation component
 ├── salespeople/                # Salespeople list (parent)
 ├── salesperson/                # Single salesperson (child)
-├── sales/                      # Sales table
+├── salesperson-detail/         # Salesperson detail page
+├── sales/                      # Sales table with forms
 ├── favorite-salesperson/       # Favorite display
 ├── services/                   # Shared services
 │   ├── http.ts
 │   └── data-pass.ts
+├── interceptors/               # HTTP interceptors
+│   └── auth-interceptor.ts
+├── pipes/                      # Custom pipes
+│   └── spongebob-pipe.ts
 └── models/                     # Data models
     ├── salesperson.model.ts
-    └── sale.ts
+    └── salesperson.ts
 ```
 
 ---
@@ -96,7 +104,8 @@ export class App {
 | Footer | `app-footer` | Page footer |
 | Salespeople | `app-salespeople` | Parent component showing list of salespeople |
 | Salesperson | `app-salesperson` | Child component for individual salesperson |
-| Sales | `app-sales` | Displays sales data in a table |
+| SalespersonDetail | `app-salesperson-detail` | Detail view for a single salesperson |
+| Sales | `app-sales` | Displays sales data with forms |
 | FavoriteSalesperson | `app-favorite-salesperson` | Shows the currently selected favorite |
 
 ---
@@ -112,6 +121,7 @@ Marks a class as an Angular component.
 ```typescript
 @Component({
   selector: 'app-salesperson',
+  imports: [CommonModule],
   templateUrl: './salesperson.html',
   styleUrl: './salesperson.css'
 })
@@ -139,7 +149,14 @@ Allows a parent component to pass data to a child component.
 
 ```typescript
 export class Salesperson {
-  @Input() salesperson!: SalespersonModel;  // Receives data from parent
+  @Input() salesperson: SalespersonModel = {
+    id: 0,
+    firstName: '',
+    lastName: '',
+    department: '',
+    hireDate: '',
+    salary: 0
+  };
 }
 ```
 
@@ -157,17 +174,42 @@ Allows a child component to send events to a parent component.
 ```typescript
 export class Salesperson {
   @Output() deleteSalespersonEvent = new EventEmitter<number>();
+  @Output() raiseSalaryEvent = new EventEmitter<any>();
 
   deleteSalesperson() {
     this.deleteSalespersonEvent.emit(this.salesperson.id);
+  }
+
+  raiseSalary() {
+    this.raiseSalaryEvent.emit(this.salesperson.id);
   }
 }
 ```
 
 **Parent template usage:**
 ```html
-<app-salesperson (deleteSalespersonEvent)="deleteMockSalesperson($event)">
+<app-salesperson
+  [salesperson]="sp"
+  (deleteSalespersonEvent)="deleteMockSalesperson($event)"
+  (raiseSalaryEvent)="raiseMockSalary($event)">
 </app-salesperson>
+```
+
+### @Pipe
+
+Marks a class as a pipe for transforming data in templates.
+
+**File:** `src/app/pipes/spongebob-pipe.ts`
+
+```typescript
+@Pipe({
+  name: 'spongebob',
+})
+export class SpongebobPipe implements PipeTransform {
+  transform(value: string, capFirst: boolean): string {
+    // Transform logic here
+  }
+}
 ```
 
 ---
@@ -206,15 +248,27 @@ Listen for events from elements or child components.
 **File:** `src/app/salesperson/salesperson.html`
 
 ```html
-<button (click)="deleteSalesperson()">DELETE</button>
+<button type="button" (click)="deleteSalesperson()">DELETE</button>
+<button type="button" (click)="showDetails()">Details</button>
+<button type="button" (click)="raiseSalary()">RAISE SALARY</button>
 ```
 
 **File:** `src/app/salespeople/salespeople.html`
 
 ```html
-<!-- Listening for custom event from child -->
-<app-salesperson (deleteSalespersonEvent)="deleteMockSalesperson($event)">
+<!-- Listening for custom events from child -->
+<app-salesperson
+  (deleteSalespersonEvent)="deleteMockSalesperson($event)"
+  (raiseSalaryEvent)="raiseMockSalary($event)">
 </app-salesperson>
+```
+
+### Two-Way Binding `[( )]`
+
+Combines property and event binding for form inputs (see [Forms section](#forms--two-way-binding)).
+
+```html
+<input [(ngModel)]="customerFirstName">
 ```
 
 ### Summary of Binding Syntax
@@ -224,6 +278,7 @@ Listen for events from elements or child components.
 | `{{value}}` | Component → Template | `{{salesperson.name}}` |
 | `[property]="value"` | Component → Element | `[salesperson]="sp"` |
 | `(event)="handler()"` | Element → Component | `(click)="delete()"` |
+| `[(ngModel)]="value"` | Two-way | `[(ngModel)]="name"` |
 
 ---
 
@@ -253,20 +308,131 @@ Iterate over arrays to create repeated elements.
 @for(item of arrayOfSales; track $index) {
   <tr>
     <td>{{item.id}}</td>
-    <td>{{item.customer_first_name}}</td>
-    <td>{{item.customer_last_name}}</td>
-    <td>{{item.date}}</td>
-    <td>{{item.total}}</td>
+    <td>{{item.customer_first_name | spongebob: true}}</td>
+    <td>{{item.customer_last_name | spongebob: false}}</td>
+    <td>{{item.date | date: "shortDate"}}</td>
+    <td>{{item.total | currency}}</td>
     <td>{{item.salesperson_id}}</td>
   </tr>
+}
+```
+
+### @if / @else Conditional
+
+Conditionally render elements based on a condition.
+
+**File:** `src/app/salesperson-detail/salesperson-detail.html`
+
+```html
+@if(salesperson.id) {
+  <ul>
+    <li>{{salesperson.id}}</li>
+    <li>{{salesperson.first_name}}</li>
+    <li>{{salesperson.last_name}}</li>
+    <li>{{salesperson.department}}</li>
+    <li>{{salesperson.hire_date}}</li>
+    <li>{{salesperson.salary}}</li>
+  </ul>
+}
+@else {
+  <p>No Salesperson with ID {{failedId}} exists!</p>
 }
 ```
 
 ### Key Points:
 
 - `track $index` helps Angular efficiently update the DOM when the array changes
-- The variable (`sp`, `item`) is available inside the block
-- This replaces the older `*ngFor` directive
+- `@for` replaces the older `*ngFor` directive
+- `@if/@else` replaces the older `*ngIf` directive
+- These are the preferred syntax in modern Angular (17+)
+
+---
+
+## Pipes
+
+Pipes transform data for display in templates without modifying the underlying data.
+
+### Built-in Pipes
+
+**Date Pipe** - Formats dates
+
+**File:** `src/app/salesperson/salesperson.html`
+
+```html
+<li>Hire Date: {{salesperson.hireDate | date: 'fullTime'}}</li>
+```
+
+**File:** `src/app/sales/sales.html`
+
+```html
+<td>{{item.date | date: "shortDate"}}</td>
+```
+
+**Currency Pipe** - Formats numbers as currency
+
+```html
+<li>Salary: {{salesperson.salary | currency: 'USD'}}</li>
+<td>{{item.total | currency}}</td>
+```
+
+### Custom Pipes
+
+You can create your own pipes for custom transformations.
+
+**File:** `src/app/pipes/spongebob-pipe.ts`
+
+```typescript
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'spongebob',
+})
+export class SpongebobPipe implements PipeTransform {
+
+  // The transform method is required
+  transform(value: string, capFirst: boolean, ...args: unknown[]): string {
+    let newValue = '';
+
+    if (capFirst) {
+      for (let i = 0; i < value.length; i++) {
+        // Alternate casing of every other character
+        if (i % 2 != 0) {
+          newValue += value[i].toUpperCase();
+        } else {
+          newValue += value[i].toLowerCase();
+        }
+      }
+    } else {
+      for (let i = 0; i < value.length; i++) {
+        if (i % 2 == 0) {
+          newValue += value[i].toUpperCase();
+        } else {
+          newValue += value[i].toLowerCase();
+        }
+      }
+    }
+    return newValue;
+  }
+}
+```
+
+**Using the custom pipe:**
+
+**File:** `src/app/sales/sales.html`
+
+```html
+<!-- Import the pipe in the component's imports array first -->
+<td>{{item.customer_first_name | spongebob: true}}</td>
+<td>{{item.customer_last_name | spongebob: false}}</td>
+```
+
+### Pipe Syntax
+
+```
+{{ value | pipeName }}              // No parameters
+{{ value | pipeName: param1 }}      // One parameter
+{{ value | pipeName: param1: param2 }}  // Multiple parameters
+```
 
 ---
 
@@ -282,10 +448,22 @@ Routing allows navigation between different views/components.
 import { Routes } from '@angular/router';
 import { Salespeople } from './salespeople/salespeople';
 import { Sales } from './sales/sales';
+import { SalespersonDetail } from './salesperson-detail/salesperson-detail';
 
 export const routes: Routes = [
-  { path: 'salespeople', component: Salespeople },
-  { path: 'sales', component: Sales },
+  {
+    path: 'salespeople',
+    component: Salespeople
+  },
+  {
+    path: 'sales',
+    component: Sales
+  },
+  // Route with parameter - :id is a dynamic segment
+  {
+    path: 'salesperson/:id',
+    component: SalespersonDetail
+  }
 ];
 ```
 
@@ -310,6 +488,55 @@ Navigation links that don't cause full page reloads.
 ```html
 <a routerLink="salespeople">SALESPEOPLE</a>
 <a routerLink="sales">SALES</a>
+```
+
+### Programmatic Navigation
+
+Navigate from within a component using the Router service.
+
+**File:** `src/app/salesperson/salesperson.ts`
+
+```typescript
+import { Router } from '@angular/router';
+
+export class Salesperson {
+  constructor(private router: Router) { }
+
+  showDetails() {
+    // Navigate to /salesperson/123 (where 123 is the id)
+    this.router.navigate(['/salesperson' + this.salesperson.id]);
+  }
+}
+```
+
+### Route Parameters with ActivatedRoute
+
+Access route parameters in a component.
+
+**File:** `src/app/salesperson-detail/salesperson-detail.ts`
+
+```typescript
+import { ActivatedRoute } from '@angular/router';
+
+export class SalespersonDetail {
+  constructor(private route: ActivatedRoute, private httpService: Http) {
+    this.getSalespersonById();
+  }
+
+  getSalespersonById() {
+    // Access the 'id' parameter from the URL
+    const id = this.route.snapshot.params['id'];
+
+    this.httpService.getSalespersonById(id).subscribe({
+      next: response => {
+        // Handle successful response
+      },
+      error: (err) => {
+        // Handle error
+      }
+    });
+  }
+}
 ```
 
 ### Providing the Router
@@ -346,10 +573,11 @@ import { BehaviorSubject } from 'rxjs';
   providedIn: 'root'  // Singleton - one instance for entire app
 })
 export class DataPass {
-  private favoriteSalespersonSubject = new BehaviorSubject<string>('');
+  // BehaviorSubject for sharing data between components
+  favoriteSalespersonSubject = new BehaviorSubject<string>('');
   favoriteSalesperson = this.favoriteSalespersonSubject.asObservable();
 
-  updateFavoriteSalesperson(newFave: string) {
+  setFavoriteSalesperson(newFave: string) {
     this.favoriteSalespersonSubject.next(newFave);
   }
 }
@@ -360,14 +588,22 @@ export class DataPass {
 **File:** `src/app/salesperson/salesperson.ts`
 
 ```typescript
-import { DataPass } from '../services/data-pass';
+import { DataPass as DataPassService } from '../services/data-pass';
+import { Router } from '@angular/router';
 
 export class Salesperson {
-  // Angular automatically provides the service instance
-  constructor(private datapass: DataPass) { }
+  favoriteSalesperson: string = '';
 
-  makeFavorite() {
-    this.datapass.updateFavoriteSalesperson(this.salesperson.firstName);
+  // Angular automatically provides the service instances
+  constructor(private datapass: DataPassService, private router: Router) {
+    // Subscribe to changes in the favorite
+    this.datapass.favoriteSalespersonSubject.subscribe(fave => {
+      this.favoriteSalesperson = fave;
+    });
+  }
+
+  setFaveSalesperson() {
+    this.datapass.setFavoriteSalesperson(this.salesperson.firstName);
   }
 }
 ```
@@ -389,12 +625,12 @@ The HttpClient service makes HTTP requests to APIs.
 **File:** `src/app/app.config.ts`
 
 ```typescript
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authInterceptor } from './interceptors/auth-interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideHttpClient(),  // Enables HTTP requests
-    // other providers...
+    provideHttpClient(withInterceptors([authInterceptor]))
   ]
 };
 ```
@@ -416,36 +652,44 @@ export class Http {
 
   constructor(private http: HttpClient) { }
 
-  // GET request
+  // GET all salespeople
   getAllSalespeople(): Observable<HttpResponse<Salesperson[]>> {
     return this.http.get<Salesperson[]>(
-      `${this.baseUrl}/salespeople`,
+      `${this.baseUrl}/salesperson`,
       { observe: 'response' }
     );
   }
 
-  // POST request
+  // GET single salesperson by ID
+  getSalespersonById(salespersonId: number): Observable<HttpResponse<Salesperson>> {
+    return this.http.get<Salesperson>(
+      `${this.baseUrl}/salesperson/${salespersonId}`,
+      { observe: 'response' }
+    );
+  }
+
+  // POST - create new sale
   addSale(saleData: any): Observable<HttpResponse<Sale>> {
     return this.http.post<Sale>(
-      `${this.baseUrl}/sales`,
+      `${this.baseUrl}/sale`,
       saleData,
       { observe: 'response' }
     );
   }
 
-  // PUT request
+  // PUT - update existing sale
   updateSale(saleId: number, saleData: any): Observable<HttpResponse<Sale>> {
     return this.http.put<Sale>(
-      `${this.baseUrl}/sales/${saleId}`,
+      `${this.baseUrl}/sale/${saleId}`,
       saleData,
       { observe: 'response' }
     );
   }
 
-  // DELETE request
+  // DELETE salesperson
   deleteSalesperson(salespersonId: number): Observable<HttpResponse<void>> {
     return this.http.delete<void>(
-      `${this.baseUrl}/salespeople/${salespersonId}`,
+      `${this.baseUrl}/salesperson/${salespersonId}`,
       { observe: 'response' }
     );
   }
@@ -462,11 +706,63 @@ export class Salespeople {
 
   deleteSalesperson(id: number) {
     this.httpService.deleteSalesperson(id).subscribe(response => {
-      console.log('Deleted successfully');
+      console.log(response);
+      this.getAllSalespeople();  // Refresh the list
     });
   }
 }
 ```
+
+---
+
+## HTTP Interceptors
+
+Interceptors allow you to modify HTTP requests before they are sent or responses before they are processed. Common uses include adding authentication headers, logging, or error handling.
+
+### Creating an Interceptor
+
+**File:** `src/app/interceptors/auth-interceptor.ts`
+
+```typescript
+import { HttpHeaders, HttpInterceptorFn } from '@angular/common/http';
+
+// Functional interceptor (modern Angular approach)
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  // Encode credentials for Basic Auth
+  let authString: string = btoa('admin:password123');
+
+  // Clone the request and add the Authorization header
+  let newReq = req.clone({
+    headers: req.headers.set('Authorization', 'Basic ' + authString)
+  });
+
+  // Pass the modified request to the next handler
+  return next(newReq);
+};
+```
+
+### Registering the Interceptor
+
+**File:** `src/app/app.config.ts`
+
+```typescript
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { authInterceptor } from './interceptors/auth-interceptor';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // Add interceptors to the HttpClient
+    provideHttpClient(withInterceptors([authInterceptor]))
+  ]
+};
+```
+
+### How Interceptors Work:
+
+1. Every HTTP request passes through all registered interceptors
+2. Interceptors can modify the request (add headers, transform data)
+3. Call `next(req)` to pass the request to the next interceptor or the server
+4. Interceptors can also modify responses on the way back
 
 ---
 
@@ -493,13 +789,13 @@ import { BehaviorSubject } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class DataPass {
   // BehaviorSubject holds current value (starts with '')
-  private favoriteSalespersonSubject = new BehaviorSubject<string>('');
+  favoriteSalespersonSubject = new BehaviorSubject<string>('');
 
   // Expose as Observable (read-only)
   favoriteSalesperson = this.favoriteSalespersonSubject.asObservable();
 
   // Update the value
-  updateFavoriteSalesperson(newFave: string) {
+  setFavoriteSalesperson(newFave: string) {
     this.favoriteSalespersonSubject.next(newFave);  // Emit new value
   }
 }
@@ -507,26 +803,58 @@ export class DataPass {
 
 ### Subscribing to Observables
 
-**File:** `src/app/favorite-salesperson/favorite-salesperson.ts`
+**Simple callback:**
 
 ```typescript
-export class FavoriteSalesperson {
-  mockFave: string = '';
-
-  constructor(private datapass: DataPass) {
-    // Subscribe to get updates whenever value changes
-    this.datapass.favoriteSalesperson.subscribe(value => {
-      this.mockFave = value;
-    });
-  }
-}
+this.httpService.deleteSalesperson(id).subscribe(response => {
+  console.log(response);
+});
 ```
 
-### HTTP Observable Example
+**Observer object with next/error/complete:**
+
+**File:** `src/app/salesperson-detail/salesperson-detail.ts`
+
+```typescript
+this.httpService.getSalespersonById(this.route.snapshot.params['id']).subscribe({
+  // Called when the request succeeds
+  next: response => {
+    if (response.body) {
+      this.salesperson = new Salesperson(
+        response.body.id,
+        response.body.first_name,
+        response.body.last_name,
+        response.body.department,
+        response.body.hire_date,
+        response.body.salary
+      );
+    }
+  },
+  // Called when the request fails
+  error: (err) => {
+    this.failedId = this.route.snapshot.params['id'];
+    this.failedStatus = err.status;
+  },
+  // Called after next completes (optional)
+  complete: () => {
+    console.log('Complete block executed');
+  }
+});
+```
+
+### Using map() to Transform Data
 
 ```typescript
 this.httpService.getAllSalespeople().subscribe(response => {
-  this.salespeople = response.body;  // Access the response data
+  // Transform the API response to match our model
+  this.mockSalespeople = response.body.map((spData: any) => ({
+    id: spData.id,
+    firstName: spData.first_name,
+    lastName: spData.last_name,
+    department: spData.department,
+    hireDate: spData.hire_date,
+    salary: spData.salary
+  }));
 });
 ```
 
@@ -567,6 +895,86 @@ this.title.update(current => current + ' Updated');
 
 ---
 
+## Forms & Two-Way Binding
+
+Angular provides powerful form handling capabilities.
+
+### Template-Driven Forms with ngModel
+
+**File:** `src/app/sales/sales.ts`
+
+```typescript
+import { FormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-sales',
+  imports: [FormsModule, SpongebobPipe, CommonModule, DatePipe, CurrencyPipe],
+  templateUrl: './sales.html',
+  styleUrls: ['./sales.css'],
+})
+export class Sales {
+  // Form properties bound to inputs
+  customerFirstName: string = '';
+  customerLastName: string = '';
+  date: string = '';
+  total: number = 0;
+  salespersonId: number = 0;
+}
+```
+
+### Two-Way Binding Syntax
+
+**File:** `src/app/sales/sales.html`
+
+```html
+<form>
+  <label for="customerFirstName">Customer First Name</label>
+  <input type="text"
+         id="customerFirstName"
+         name="customerFirstName"
+         [(ngModel)]="customerFirstName">
+
+  <label for="customerLastName">Customer Last Name</label>
+  <input type="text"
+         id="customerLastName"
+         name="customerLastName"
+         [(ngModel)]="customerLastName">
+
+  <label for="date">Date</label>
+  <input type="date"
+         id="date"
+         name="date"
+         [(ngModel)]="date">
+
+  <label for="total">Total</label>
+  <input type="number"
+         id="total"
+         name="total"
+         [(ngModel)]="total">
+
+  <label for="salespersonId">Salesperson ID</label>
+  <select id="salespersonId"
+          name="salespersonId"
+          [(ngModel)]="salespersonId">
+    @for(id of salespersonIds; track $index) {
+      <option value="{{id}}">{{id}}</option>
+    }
+  </select>
+
+  <button type="button" (click)="createSale()">Create Sale</button>
+</form>
+```
+
+### How Two-Way Binding Works:
+
+- `[]` (property binding) - Updates the input when the TypeScript variable changes
+- `()` (event binding) - Updates the TypeScript variable when the input changes
+- `[()]` (banana-in-a-box) - Does both simultaneously
+
+**Important:** When using `ngModel`, you must also include the `name` attribute on the input element.
+
+---
+
 ## Models & Interfaces
 
 Models define the shape of your data. TypeScript interfaces and classes help with type safety.
@@ -588,31 +996,31 @@ export interface SalespersonModel {
 
 ### Class with Constructor
 
-**File:** `src/app/models/sale.ts`
+**File:** `src/app/models/salesperson.ts`
 
 ```typescript
-export class Sale {
+export class Salesperson {
   id: number;
-  customer_first_name: string;
-  customer_last_name: string;
-  date: string;
-  total: number;
-  salesperson_id: number;
+  first_name: string;
+  last_name: string;
+  department: string;
+  hire_date: string;
+  salary: number;
 
   constructor(
     id: number,
-    customer_first_name: string,
-    customer_last_name: string,
-    date: string,
-    total: number,
-    salesperson_id: number
+    first_name: string,
+    last_name: string,
+    department: string,
+    hire_date: string,
+    salary: number
   ) {
     this.id = id;
-    this.customer_first_name = customer_first_name;
-    this.customer_last_name = customer_last_name;
-    this.date = date;
-    this.total = total;
-    this.salesperson_id = salesperson_id;
+    this.first_name = first_name;
+    this.last_name = last_name;
+    this.department = department;
+    this.hire_date = hire_date;
+    this.salary = salary;
   }
 }
 ```
@@ -652,14 +1060,15 @@ bootstrapApplication(App, appConfig)
 ```typescript
 import { ApplicationConfig, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { routes } from './app.routes';
+import { authInterceptor } from './interceptors/auth-interceptor';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),  // Error handling
-    provideRouter(routes),                  // Routing
-    provideHttpClient()                     // HTTP client
+    provideBrowserGlobalErrorListeners(),              // Error handling
+    provideRouter(routes),                             // Routing
+    provideHttpClient(withInterceptors([authInterceptor]))  // HTTP with interceptors
   ]
 };
 ```
@@ -756,8 +1165,9 @@ describe('Http', () => {
 ```typescript
 @Component({...})    // Define a component
 @Injectable({...})   // Define a service
-@Input()            // Receive data from parent
-@Output()           // Send events to parent
+@Pipe({...})         // Define a pipe
+@Input()             // Receive data from parent
+@Output()            // Send events to parent
 ```
 
 ### Control Flow Cheat Sheet
@@ -772,7 +1182,46 @@ describe('Http', () => {
 @if (condition) {
   <div>Shown when true</div>
 }
+@else {
+  <div>Shown when false</div>
+}
 ```
+
+### Pipe Cheat Sheet
+
+```html
+<!-- Built-in pipes -->
+{{ date | date: 'shortDate' }}
+{{ price | currency: 'USD' }}
+{{ text | uppercase }}
+{{ text | lowercase }}
+
+<!-- Custom pipe with parameter -->
+{{ name | spongebob: true }}
+```
+
+---
+
+## Concepts Summary
+
+This project demonstrates:
+
+1. **Standalone Components** - No NgModules, self-contained components
+2. **Dependency Injection** - Services, constructor injection
+3. **Parent-Child Communication** - @Input, @Output, EventEmitter
+4. **RxJS Observables** - BehaviorSubject, subscribe, next/error/complete
+5. **Routing** - Routes, RouterLink, RouterOutlet, route parameters
+6. **Programmatic Navigation** - Router.navigate(), ActivatedRoute
+7. **HTTP Client** - GET, POST, PUT, DELETE requests
+8. **HTTP Interceptors** - Request/response modification
+9. **Template Syntax** - Interpolation, property/event binding
+10. **Modern Control Flow** - @for, @if/@else
+11. **Built-in Pipes** - date, currency formatting
+12. **Custom Pipes** - Creating your own transformations
+13. **Two-Way Binding** - [(ngModel)] for forms
+14. **Reactive State** - Signals
+15. **Services with providedIn: 'root'** - Singleton pattern
+16. **Testing** - TestBed, ComponentFixture, Jasmine/Vitest
 
 ---
 
@@ -784,4 +1233,4 @@ describe('Http', () => {
 
 ---
 
-*This documentation was generated based on the concepts used in this Angular project.*
+*This documentation covers Angular concepts used in this project (Angular 21).*
